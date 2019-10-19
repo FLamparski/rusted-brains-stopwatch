@@ -9,23 +9,26 @@ extern crate panic_semihosting; // logs messages to the host stderr; requires a 
 extern crate stm32f4xx_hal as hal;
 
 use crate::hal::{
-    prelude::*,
-    gpio::{ExtiPin, Edge, PullUp, Input, gpioc::PC13},
-    rcc::{Rcc, Clocks},
-    i2c::I2c,
-    stm32,
-    timer::{Timer, Event},
     delay::Delay,
+    gpio::{gpioc::PC13, Edge, ExtiPin, Input, PullUp},
+    i2c::I2c,
     interrupt,
+    prelude::*,
+    rcc::{Clocks, Rcc},
+    stm32,
+    timer::{Event, Timer},
 };
-use cortex_m::interrupt::{Mutex, free, CriticalSection};
-use cortex_m_rt::{entry};
-use embedded_graphics::{fonts::{Font6x12, Font12x16}, prelude::*};
-use ssd1306::{prelude::*, Builder as SSD1306Builder};
-use core::cell::{Cell, RefCell};
-use core::ops::{DerefMut};
-use core::fmt;
 use arrayvec::ArrayString;
+use core::cell::{Cell, RefCell};
+use core::fmt;
+use core::ops::DerefMut;
+use cortex_m::interrupt::{free, CriticalSection, Mutex};
+use cortex_m_rt::entry;
+use embedded_graphics::{
+    fonts::{Font12x16, Font6x12},
+    prelude::*,
+};
+use ssd1306::{prelude::*, Builder as SSD1306Builder};
 
 static ELAPSED_MS: Mutex<Cell<u32>> = Mutex::new(Cell::new(0u32));
 static TIMER_TIM2: Mutex<RefCell<Option<Timer<stm32::TIM2>>>> = Mutex::new(RefCell::new(None));
@@ -37,7 +40,7 @@ static BUTTON: Mutex<RefCell<Option<PC13<Input<PullUp>>>>> = Mutex::new(RefCell:
 enum StopwatchState {
     Ready,
     Running,
-    Stopped
+    Stopped,
 }
 
 #[entry]
@@ -98,7 +101,7 @@ fn main() -> ! {
             let state_msg = match state {
                 StopwatchState::Ready => "Ready",
                 StopwatchState::Running => "",
-                StopwatchState::Stopped => "Stopped"
+                StopwatchState::Stopped => "Stopped",
             };
             let state_text = Font6x12::render_str(state_msg)
                 .with_stroke(Some(1u8.into()))
@@ -137,7 +140,8 @@ fn EXTI15_10() {
     free(|cs| {
         let mut btn_ref = BUTTON.borrow(cs).borrow_mut();
         let mut exti_ref = EXTI.borrow(cs).borrow_mut();
-        if let (Some(ref mut btn), Some(ref mut exti)) = (btn_ref.deref_mut(), exti_ref.deref_mut()) {
+        if let (Some(ref mut btn), Some(ref mut exti)) = (btn_ref.deref_mut(), exti_ref.deref_mut())
+        {
             // We cheat and don't bother checking _which_ exact interrupt line fired - there's only
             // ever going to be one in this example.
             btn.clear_interrupt_pending_bit(exti);
@@ -149,12 +153,12 @@ fn EXTI15_10() {
                 StopwatchState::Ready => {
                     stopwatch_start(cs);
                     STATE.borrow(cs).replace(StopwatchState::Running);
-                },
+                }
                 StopwatchState::Running => {
                     stopwatch_stop(cs);
                     STATE.borrow(cs).replace(StopwatchState::Stopped);
-                },
-                StopwatchState::Stopped => {},
+                }
+                StopwatchState::Stopped => {}
             }
         }
     });
@@ -172,7 +176,9 @@ fn setup_clocks(rcc: Rcc) -> Clocks {
 
 fn stopwatch_start<'cs>(cs: &'cs CriticalSection) {
     ELAPSED_MS.borrow(cs).replace(0);
-    unsafe { stm32::NVIC::unmask(hal::interrupt::TIM2); }
+    unsafe {
+        stm32::NVIC::unmask(hal::interrupt::TIM2);
+    }
 }
 
 fn stopwatch_stop<'cs>(_cs: &'cs CriticalSection) {
@@ -183,17 +189,21 @@ fn format_elapsed(buf: &mut ArrayString<[u8; 10]>, elapsed: u32) {
     let minutes = elapsed_to_m(elapsed);
     let seconds = elapsed_to_s(elapsed);
     let millis = elapsed_to_ms(elapsed);
-    fmt::write(buf, format_args!("{}:{:02}.{:03}", minutes, seconds, millis)).unwrap();
+    fmt::write(
+        buf,
+        format_args!("{}:{:02}.{:03}", minutes, seconds, millis),
+    )
+    .unwrap();
 }
 
 fn elapsed_to_ms(elapsed: u32) -> u32 {
-    return elapsed % 1000
+    return elapsed % 1000;
 }
 
 fn elapsed_to_s(elapsed: u32) -> u32 {
-    return (elapsed - elapsed_to_ms(elapsed)) % 60000 / 1000
+    return (elapsed - elapsed_to_ms(elapsed)) % 60000 / 1000;
 }
 
 fn elapsed_to_m(elapsed: u32) -> u32 {
-    return elapsed / 60000
+    return elapsed / 60000;
 }
