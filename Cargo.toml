@@ -15,8 +15,7 @@ ssd1306 = "0.2.6"
 embedded-graphics = "0.4.9"
 
 [dependencies.stm32f4xx-hal]
-# version = "0.5.0"
-path = "../stm32f4xx-hal"
+version = "0.6.0"
 features = ["stm32f446", "rt"]
 
 [dependencies.arrayvec]

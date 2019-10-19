@@ -13,8 +13,7 @@ use crate::hal::{
     rcc::{Rcc, Clocks},
     i2c::I2c,
     stm32,
-    timer::Timer,
-    timer::Event,
+    timer::{Timer, Event},
     delay::Delay,
     interrupt,
 };
